@@ -1,0 +1,9 @@
+# Required
+PACKAGE_NAMES="@ttsalpha/qrcode"
+DISCORD_WEBHOOK_URL=""
+
+# Optional — defaults shown; delete a line to keep its default
+TIMEZONE="UTC"
+NOTIFY_HOUR="10"
+NOTIFY_INTERVAL="daily"
+NOTIFY_WEEKDAY="mon"

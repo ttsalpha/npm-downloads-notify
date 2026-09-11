@@ -1,0 +1,11 @@
+name = "npm-downloads-notify"
+main = "worker.js"
+compatibility_date = "2026-09-11"
+
+# Config lives entirely in secrets, not here — see README:
+#   required: PACKAGE_NAMES, DISCORD_WEBHOOK_URL
+#   optional: TIMEZONE, NOTIFY_HOUR, NOTIFY_INTERVAL, NOTIFY_WEEKDAY
+
+# Runs hourly; the worker decides when it is actually due
+[triggers]
+crons = ["0 * * * *"]

@@ -1,0 +1,16 @@
+{
+  "name": "npm-downloads-notify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secrets": "wrangler secret bulk .dev.vars",
+    "secret": "wrangler secret put"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  },
+  "packageManager": "pnpm@12.4.1"
+}
