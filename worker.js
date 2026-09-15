@@ -1,7 +1,13 @@
+const DAY_MS = 86_400_000;
+
+// npm's last-week/last-month aliases trail the newest data, so dates are explicit
 const PERIODS = [
-  { path: "last-week", label: "weekly" },
-  { path: "last-month", label: "monthly" },
+  { days: 7, label: "weekly" },
+  { days: 30, label: "monthly" },
 ];
+
+// Shorter periods are tails of the longest, so one request serves them all
+const WINDOW_DAYS = Math.max(...PERIODS.map((period) => period.days));
 
 const INTERVALS = ["daily", "weekly"];
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -138,36 +144,51 @@ function reportDate(timeZone) {
   }).format(new Date());
 }
 
-async function fetchDownloads(name, period) {
+// Ends yesterday because npm has no data for the current day; UTC matches its buckets
+function windowRange() {
+  const end = Date.now() - DAY_MS;
+  const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+  return `${isoDay(end - (WINDOW_DAYS - 1) * DAY_MS)}:${isoDay(end)}`;
+}
+
+// npm returns dataless days as 0 instead of omitting them, so the tail stays aligned
+function sumLastDays(entries, span) {
+  return entries.slice(-span).reduce((sum, entry) => sum + entry.downloads, 0);
+}
+
+async function fetchPackage(name, range) {
   const res = await fetch(
-    `https://api.npmjs.org/downloads/point/${period.path}/${name}`,
+    `https://api.npmjs.org/downloads/range/${range}/${name}`,
     { headers: { accept: "application/json" } },
   );
 
   if (!res.ok) {
     throw new Error(
-      `npm API failed for ${name} ${period.path}: ${res.status} ${res.statusText}`,
+      `npm API failed for ${name} ${range}: ${res.status} ${res.statusText}`,
     );
   }
 
   const { downloads } = await res.json();
-  return { ...period, downloads };
-}
+  const stats = PERIODS.map(({ days, label }) => ({
+    label,
+    downloads: sumLastDays(downloads, days),
+  }));
 
-async function fetchPackage(name) {
-  const stats = await Promise.all(
-    PERIODS.map((period) => fetchDownloads(name, period)),
-  );
   return { name, stats };
 }
 
 async function notify(cfg) {
-  const packages = await Promise.all(cfg.packages.map(fetchPackage));
+  // Resolved once so every package reports the same window
+  const range = windowRange();
+  const packages = await Promise.all(
+    cfg.packages.map((name) => fetchPackage(name, range)),
+  );
   const content = [
-    `📈 npm downloads · ${reportDate(cfg.timezone)}`,
+    `npm downloads · ${reportDate(cfg.timezone)}`,
     ...packages.map(
       ({ name, stats }) =>
-        `📦 ${name} — ${stats
+        `${name} — ${stats
           .map((s) => `${s.downloads.toLocaleString("en-US")} ${s.label}`)
           .join(" · ")}`,
     ),
